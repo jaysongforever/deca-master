@@ -56,7 +56,7 @@ const decaList = [
   }
 ]
 
-const galleryCount = 32;
+const galleryCount = 34;
 
 ;(async () => {
   const getNfts = (cookie) => {

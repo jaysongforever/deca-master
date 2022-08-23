@@ -59,15 +59,8 @@ const decaList = [
 ;(async () => {
   const getGalleries = (usernameOrAddress, cookie) => {
     const res = axios({
-      method: 'post',
-      url: `https://deca.art/api/graphql`,
-      data: {
-        query:
-          '\n    query Galleries($usernameOrAddress: String!) {\n  galleries(usernameOrAddress: $usernameOrAddress) {\n    ...FullGallery\n  }\n}\n    \n    fragment FullGallery on Gallery {\n  id\n  name\n  renderMode\n  showListings\n  showcase\n  coverNft {\n    ...FullBareAsset\n  }\n  sections {\n    ...FullSection\n  }\n}\n    \n\n    fragment FullBareAsset on BareAsset {\n  id\n  provider\n  contract\n  tokenId\n  mediaUrl\n  previewStorageKey\n  previewMimeType\n  previewAspectRatio\n  storageKey\n  mimeType\n  tokenUrl\n  name\n  multimediaUrl\n  aspectRatio\n  metadata\n}\n    \n\n    fragment FullSection on GallerySection {\n  id\n  position\n  simpleItems {\n    id\n    sectionId\n    asset {\n      ...FullBareAsset\n    }\n    position\n  }\n  simpleTitle\n  freestyleItems {\n    ...FullFreestyleLayoutItem\n  }\n  freestyleRows\n  freestyleColumns\n}\n    \n\n    fragment FullFreestyleLayoutItem on FreestyleLayoutItem {\n  id\n  sectionId\n  startRow\n  endRow\n  startColumn\n  endColumn\n  properties {\n    ...FullFreestyleProperties\n  }\n  asset {\n    ...FullBareAsset\n  }\n  text\n}\n    \n\n    fragment FullFreestyleProperties on FreestyleProperties {\n  objectFit\n  backgroundColor\n  zIndex\n  textColor\n  fontSize\n  relativeFontSize\n  fontName\n}\n    ',
-        variables: {
-          usernameOrAddress: usernameOrAddress
-        },
-      },
+      method: 'get',
+      url: `https://api.deca.art/trpc/gallery.previews?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22usernameOrAddress%22%3A%22${usernameOrAddress}%22%7D%7D%7D`,
       headers: {
         authority: 'deca.art',
         accept: '*/*',
@@ -125,8 +118,7 @@ const decaList = [
   const deleteFunc = async(cookie, usernameOrAddress, index) => {
     const galleryInfo = await getGalleries(usernameOrAddress, cookie).catch(err => {})
     if (galleryInfo && galleryInfo.data) {
-      const info = galleryInfo.data
-      const galleries = info.data.galleries
+      const galleries = galleryInfo.data[0].result.data.json
       for (let i = 0; i < galleries.length; i++) {
         const res = await deleteGallery(galleries[i].id, cookie)
         if (res.data && res.data.data.deleteGallery) {
