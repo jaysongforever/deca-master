@@ -1,4 +1,7 @@
 const axios = require('axios')
+const decaList = require('./user')
+
+const usernameOrAddress = JSON.parse(JSON.stringify(decaList))
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads')
 // const HttpsProxyAgent = require("https-proxy-agent")
 
@@ -8,84 +11,11 @@ const { Worker, isMainThread, parentPort, workerData } = require('worker_threads
 // 随机生成固定长度的16进制字符串
 const genRanHex = size => [...Array(size)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');
 
+// 点赞类型
+// 单个画廊多种类型点赞，也只计一种的分数，所以此处取其中一种类型点赞即可
+const type = 'FIRE' // 'FIRE', 'LAUGH', 'MINDBLOWN', 'LIKE'
+
 ;(async () => {
-  // 点赞类型
-  // 单个画廊多种类型点赞，也只计一种的分数，所以此处取其中一种类型点赞即可
-  const types = ['FIRE'] // 'FIRE', 'LAUGH', 'MINDBLOWN', 'LIKE'
-  // 点赞用户凭证
-  const cookies = [
-    // {
-    //   usernameOrAddress: 'candyjayc',
-    //   cookie: '__Host-next-auth.csrf-token=40fb152f00b4cddb86196c4c8abcb011ad8dddc7f4b16e70b363598e6214e7cd%7C8e27598a26556a9376cd509dfb2b51724a75da962cede98660a34edaa9bb3723; botd-request-id=01GB1QXQRBXBXSR1S8WWS0HBNC; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art%2Fapp; _hp2_ses_props.3997967461=%7B%22ts%22%3A1661227249042%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fdxp%22%7D; _hp2_id.3997967461=%7B%22userId%22%3A%224618933511351623%22%2C%22pageviewId%22%3A%223465933359531812%22%2C%22sessionId%22%3A%225980823719525095%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..Hnb-i31GQvrfUX3X.s83L0WdkQKk2LTZ8Y-uLOZp0G11y1_3K3plXEWE_wX7goocqNcnCzXdc31O8J15Wki4n8arP41FYc20zDdj05P2bOd0bMj-5p3Dx2eIHricxldhJ1yip2PGW7orQGAGfhGwPOo4BI5rgSVjmj3cdBEjwFGreM3QSSFTSsWdCGIQ.QmNxIAF4BpAWnsW5qjomSg'
-    // },
-    // {
-    //   usernameOrAddress: '111219',
-    //   cookie: '_hp2_ses_props.3997967461=%7B%22ts%22%3A1661223789205%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fdxp%22%7D; __Host-next-auth.csrf-token=5c19b64eabb56287be2ffcaa30fa95d5e7c7fe626abb874052a24bfa38da6aa7%7C8a85288ef8cc2090037e4a6c9bded73f34a10bce746fb2b02a54391e2e046aaf; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art; _hp2_id.3997967461=%7B%22userId%22%3A%222082741876615336%22%2C%22pageviewId%22%3A%225899937872378533%22%2C%22sessionId%22%3A%226860315679376362%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..DQM3Uhxr6WJ4B23i.AcFx91EbEEsy2ZDbRaKyOJiT8yLfF4nuJ5HirS_QHifrsFRM5Pp1ILEvK-gRUcOItdPj-oqaMEX8R0U5v8W24jlBg0ok6utemgrQaMQnYWje3RPsIAPDj1qIkUZVokHSXiOmX8nKmG-_d3kpa1RM5482t8zIVoaA4s6alwoZAzY.iCn06yautPusKjRefQwJyw'
-    // },
-    // {
-    //   usernameOrAddress: 'battle',
-    //   cookie: '__Host-next-auth.csrf-token=c5dfef5fdbd0520b4f4538be45ddd912f6c54fd3aebe7a93941f46c1d6948fe6%7Cfe38ca4202bd8c5b8920195a3cd9045480cba46acf2b4927866c1fba9a04397f; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art; _hp2_ses_props.3997967461=%7B%22ts%22%3A1661223788308%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fdxp%22%7D; _hp2_id.3997967461=%7B%22userId%22%3A%225056116719419819%22%2C%22pageviewId%22%3A%227110146101138612%22%2C%22sessionId%22%3A%223382170386689188%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..v5RqSvE3MLVi3UtD.enqoyOgPp1BlB6RTKnO_WL7eWycMc6GAV82PP9BxQNi6TGEhu6dQL10uLeimfv3W-gMsMZA3UVzqGVvg5KF68AAU3Yko963xj6HCcLSpRzdKv85mKms0yWemBykFdbnKNRfqR2wOvsMb4oH0ZfX-EZvKQwHL_0eGYIMq9-0yGKM.2yEBdZAH8ry2_q0QHO1Z_w'
-    // },
-    // {
-    //   usernameOrAddress: 'coinclaim',
-    //   cookie: '__Host-next-auth.csrf-token=b509cca210a8e7ecc5d17d5bb4141e58fd775409899be1a3d4feca1a3ade956e%7C8fb4659ba19a1a9bc89ea96f690b6003c008ad9aa5f6c60bf34ebbbd7eace889; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art; _hp2_ses_props.3997967461=%7B%22ts%22%3A1661227112060%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fdxp%22%7D; _hp2_id.3997967461=%7B%22userId%22%3A%228490018211348393%22%2C%22pageviewId%22%3A%22429030349436536%22%2C%22sessionId%22%3A%225336594001627819%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..IY3GyLKfeyHU0kRv.QL7wj2Pq_1oJp7Y9riVNMLnziKRCXKemIIbxlJwWZiZFdYCVtpUFnOFdSojzAiHHPpFAgpZQYt0rQ7jw07AybEyNW1pBEHp8x7G1KR-ew3Ek4RxGIQihls8w3TJc1HDQgyiNr42WI6Cju21hNBSpE1w8v7r_LCkBvmAGAzLiMnw.EqgJ6XpLRcN47bHuqQ_lbw'
-    // },
-
-    {
-      usernameOrAddress: 'f1fsa',
-      cookie: '_hp2_ses_props.3997967461=%7B%22ts%22%3A1661248555153%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fdxp%22%7D; __Host-next-auth.csrf-token=101040520c1fc1e654ac416bdf95e43ae797f4e6710cf577cadb54f2d9ff9d52%7C9bbecda2bbffec5ff40b2d2f5369a536d848ae53f43911a7e62972bf881f9acb; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art; _hp2_id.3997967461=%7B%22userId%22%3A%222542154344638637%22%2C%22pageviewId%22%3A%225487367480811550%22%2C%22sessionId%22%3A%224158637759802551%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..xdeANRcyBuF49hzJ.nIHgSrzqY-h9xj-IzW9isErwv0qAzgF-X2S_xQa6_lMF2BkSKyfe7DJSwOH4pSUEOhh9s7YnpVT8FXpnNwEUmDeX7gfDP5zU_LWF8AKGHihH6Be67G1P-f6KOkpqr0u8YNE0C9gmyXR9P7gVIxnQ3y0lLVHl9Qa35MWZTjhS8oc.bmKrAJ796g2oH62ywcN7vg'
-    },
-    {
-      usernameOrAddress: 'kraken11',
-      cookie: '_hp2_ses_props.3997967461=%7B%22ts%22%3A1661248466346%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fdxp%22%7D; __Host-next-auth.csrf-token=14a0a54cabad68369a830371588647d839d6dd05b6b3f3d036d9b8c2c02867fa%7C4941e8b4d1727890539d22ad493c5801ac008f40ca77a974ee020b51d4c7dcdf; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art; _hp2_id.3997967461=%7B%22userId%22%3A%221988002264363912%22%2C%22pageviewId%22%3A%223141515798052462%22%2C%22sessionId%22%3A%225515245119260273%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..yXG-5yvqrB5BWEyZ.t7u2SUiSyOuTX0-B49qR8YA5Jiw6JIHhbj7TsUBrjA9ZQ4B4DAle5g0AU0gYTQs6cZFPde8Q7o3xhu5dWdctbfKTUaeIW1nKxpbyzlzR4StKqpA02jQiym7JbYvc0wZm6wJbJCFxFlPc0jYGBzbU1aphNxa1vide1yVKuOA-wlw.96favMESHpxrh9PPBgptmg'
-    },
-    {
-      usernameOrAddress: 'easy55',
-      cookie: '__Host-next-auth.csrf-token=6339b622195bd4f343469b384beb66d474732bbc88e486758694fd7488bf0de4%7Ca95a57bb57a27f8c66969f2b476272b3ac0e19259793942bdf7267dcd7a45c6d; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art; _hp2_ses_props.3997967461=%7B%22ts%22%3A1661248588482%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fupgrade%22%7D; _hp2_id.3997967461=%7B%22userId%22%3A%225723906647275650%22%2C%22pageviewId%22%3A%227788633027629250%22%2C%22sessionId%22%3A%222603814307916367%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..Du0vP2brka_DNlTJ.2xHlFEXg9OL7frugXflVZMPdlcK9oiLuZQI02rfvKrvFb-YOV3ZUqwMNsVEvcGQI31IXD2Dc7fC82UOT_uol040mPoNWsH4pYjiEWHBTRXXiPA0GrcCTFzf5UHetvmMFaLiDliCE2fCPWX4TQ0NKP_Bu70spqtMc2vosvFyxxMw.dhT1SUmIJO76UV7qa9rNKw'
-    },
-    {
-      usernameOrAddress: 'pipun',
-      cookie: '__Host-next-auth.csrf-token=e21a33e9263ab7bd414a90ac067c20ffb84dc9479052d06ff07d2fb81099f7bf%7C2cf60b0ef23bf589deffe33eb564b4ec39be7daf095da091fdd1ab2b27bb7804; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art; _hp2_ses_props.3997967461=%7B%22ts%22%3A1661248573513%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fupgrade%22%7D; _hp2_id.3997967461=%7B%22userId%22%3A%22228206889423142%22%2C%22pageviewId%22%3A%227984211927353383%22%2C%22sessionId%22%3A%221972887794065235%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..SMzJu8eJbCGCy9Uy.z2XlDYf1l0aIlayENge_QqeV1Iwt0ur3KC5vU0Y7jtfp6NFFc5SyaVi6dC2oQQNhgHP_9Tbfyb8xVoEThDX68tx2G1kkLYkTWgRJ9Whve2ozJ72p1lsBpjhq0NWBxdsAuHgFrIV03jy3F0qYGzqeKIxFrpDdA3pbC0BEz0YS53o.Xptb4J57p_4VSj8R3_JiJg'
-    },
-  ]
-  // 被点赞用户username
-  const usernameOrAddress = [
-    // {
-    //   usernameOrAddress: 'candyjayc',
-    //   cookie: '__Host-next-auth.csrf-token=40fb152f00b4cddb86196c4c8abcb011ad8dddc7f4b16e70b363598e6214e7cd%7C8e27598a26556a9376cd509dfb2b51724a75da962cede98660a34edaa9bb3723; botd-request-id=01GB1QXQRBXBXSR1S8WWS0HBNC; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art%2Fapp; _hp2_ses_props.3997967461=%7B%22ts%22%3A1661227249042%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fdxp%22%7D; _hp2_id.3997967461=%7B%22userId%22%3A%224618933511351623%22%2C%22pageviewId%22%3A%223465933359531812%22%2C%22sessionId%22%3A%225980823719525095%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..Hnb-i31GQvrfUX3X.s83L0WdkQKk2LTZ8Y-uLOZp0G11y1_3K3plXEWE_wX7goocqNcnCzXdc31O8J15Wki4n8arP41FYc20zDdj05P2bOd0bMj-5p3Dx2eIHricxldhJ1yip2PGW7orQGAGfhGwPOo4BI5rgSVjmj3cdBEjwFGreM3QSSFTSsWdCGIQ.QmNxIAF4BpAWnsW5qjomSg'
-    // },
-    // {
-    //   usernameOrAddress: '111219',
-    //   cookie: '_hp2_ses_props.3997967461=%7B%22ts%22%3A1661223789205%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fdxp%22%7D; __Host-next-auth.csrf-token=5c19b64eabb56287be2ffcaa30fa95d5e7c7fe626abb874052a24bfa38da6aa7%7C8a85288ef8cc2090037e4a6c9bded73f34a10bce746fb2b02a54391e2e046aaf; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art; _hp2_id.3997967461=%7B%22userId%22%3A%222082741876615336%22%2C%22pageviewId%22%3A%225899937872378533%22%2C%22sessionId%22%3A%226860315679376362%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..DQM3Uhxr6WJ4B23i.AcFx91EbEEsy2ZDbRaKyOJiT8yLfF4nuJ5HirS_QHifrsFRM5Pp1ILEvK-gRUcOItdPj-oqaMEX8R0U5v8W24jlBg0ok6utemgrQaMQnYWje3RPsIAPDj1qIkUZVokHSXiOmX8nKmG-_d3kpa1RM5482t8zIVoaA4s6alwoZAzY.iCn06yautPusKjRefQwJyw'
-    // },
-    // {
-    //   usernameOrAddress: 'battle',
-    //   cookie: '__Host-next-auth.csrf-token=c5dfef5fdbd0520b4f4538be45ddd912f6c54fd3aebe7a93941f46c1d6948fe6%7Cfe38ca4202bd8c5b8920195a3cd9045480cba46acf2b4927866c1fba9a04397f; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art; _hp2_ses_props.3997967461=%7B%22ts%22%3A1661223788308%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fdxp%22%7D; _hp2_id.3997967461=%7B%22userId%22%3A%225056116719419819%22%2C%22pageviewId%22%3A%227110146101138612%22%2C%22sessionId%22%3A%223382170386689188%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..v5RqSvE3MLVi3UtD.enqoyOgPp1BlB6RTKnO_WL7eWycMc6GAV82PP9BxQNi6TGEhu6dQL10uLeimfv3W-gMsMZA3UVzqGVvg5KF68AAU3Yko963xj6HCcLSpRzdKv85mKms0yWemBykFdbnKNRfqR2wOvsMb4oH0ZfX-EZvKQwHL_0eGYIMq9-0yGKM.2yEBdZAH8ry2_q0QHO1Z_w'
-    // },
-    // {
-    //   usernameOrAddress: 'coinclaim',
-    //   cookie: '__Host-next-auth.csrf-token=b509cca210a8e7ecc5d17d5bb4141e58fd775409899be1a3d4feca1a3ade956e%7C8fb4659ba19a1a9bc89ea96f690b6003c008ad9aa5f6c60bf34ebbbd7eace889; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art; _hp2_ses_props.3997967461=%7B%22ts%22%3A1661227112060%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fdxp%22%7D; _hp2_id.3997967461=%7B%22userId%22%3A%228490018211348393%22%2C%22pageviewId%22%3A%22429030349436536%22%2C%22sessionId%22%3A%225336594001627819%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..IY3GyLKfeyHU0kRv.QL7wj2Pq_1oJp7Y9riVNMLnziKRCXKemIIbxlJwWZiZFdYCVtpUFnOFdSojzAiHHPpFAgpZQYt0rQ7jw07AybEyNW1pBEHp8x7G1KR-ew3Ek4RxGIQihls8w3TJc1HDQgyiNr42WI6Cju21hNBSpE1w8v7r_LCkBvmAGAzLiMnw.EqgJ6XpLRcN47bHuqQ_lbw'
-    // },
-
-
-    {
-      usernameOrAddress: 'f1fsa',
-      cookie: '_hp2_ses_props.3997967461=%7B%22ts%22%3A1661248555153%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fdxp%22%7D; __Host-next-auth.csrf-token=101040520c1fc1e654ac416bdf95e43ae797f4e6710cf577cadb54f2d9ff9d52%7C9bbecda2bbffec5ff40b2d2f5369a536d848ae53f43911a7e62972bf881f9acb; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art; _hp2_id.3997967461=%7B%22userId%22%3A%222542154344638637%22%2C%22pageviewId%22%3A%225487367480811550%22%2C%22sessionId%22%3A%224158637759802551%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..xdeANRcyBuF49hzJ.nIHgSrzqY-h9xj-IzW9isErwv0qAzgF-X2S_xQa6_lMF2BkSKyfe7DJSwOH4pSUEOhh9s7YnpVT8FXpnNwEUmDeX7gfDP5zU_LWF8AKGHihH6Be67G1P-f6KOkpqr0u8YNE0C9gmyXR9P7gVIxnQ3y0lLVHl9Qa35MWZTjhS8oc.bmKrAJ796g2oH62ywcN7vg'
-    },
-    {
-      usernameOrAddress: 'kraken11',
-      cookie: '_hp2_ses_props.3997967461=%7B%22ts%22%3A1661248466346%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fdxp%22%7D; __Host-next-auth.csrf-token=14a0a54cabad68369a830371588647d839d6dd05b6b3f3d036d9b8c2c02867fa%7C4941e8b4d1727890539d22ad493c5801ac008f40ca77a974ee020b51d4c7dcdf; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art; _hp2_id.3997967461=%7B%22userId%22%3A%221988002264363912%22%2C%22pageviewId%22%3A%223141515798052462%22%2C%22sessionId%22%3A%225515245119260273%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..yXG-5yvqrB5BWEyZ.t7u2SUiSyOuTX0-B49qR8YA5Jiw6JIHhbj7TsUBrjA9ZQ4B4DAle5g0AU0gYTQs6cZFPde8Q7o3xhu5dWdctbfKTUaeIW1nKxpbyzlzR4StKqpA02jQiym7JbYvc0wZm6wJbJCFxFlPc0jYGBzbU1aphNxa1vide1yVKuOA-wlw.96favMESHpxrh9PPBgptmg'
-    },
-    {
-      usernameOrAddress: 'easy55',
-      cookie: '__Host-next-auth.csrf-token=6339b622195bd4f343469b384beb66d474732bbc88e486758694fd7488bf0de4%7Ca95a57bb57a27f8c66969f2b476272b3ac0e19259793942bdf7267dcd7a45c6d; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art; _hp2_ses_props.3997967461=%7B%22ts%22%3A1661248588482%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fupgrade%22%7D; _hp2_id.3997967461=%7B%22userId%22%3A%225723906647275650%22%2C%22pageviewId%22%3A%227788633027629250%22%2C%22sessionId%22%3A%222603814307916367%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..Du0vP2brka_DNlTJ.2xHlFEXg9OL7frugXflVZMPdlcK9oiLuZQI02rfvKrvFb-YOV3ZUqwMNsVEvcGQI31IXD2Dc7fC82UOT_uol040mPoNWsH4pYjiEWHBTRXXiPA0GrcCTFzf5UHetvmMFaLiDliCE2fCPWX4TQ0NKP_Bu70spqtMc2vosvFyxxMw.dhT1SUmIJO76UV7qa9rNKw'
-    },
-    {
-      usernameOrAddress: 'pipun',
-      cookie: '__Host-next-auth.csrf-token=e21a33e9263ab7bd414a90ac067c20ffb84dc9479052d06ff07d2fb81099f7bf%7C2cf60b0ef23bf589deffe33eb564b4ec39be7daf095da091fdd1ab2b27bb7804; __Secure-next-auth.callback-url=https%3A%2F%2Fdeca.art; _hp2_ses_props.3997967461=%7B%22ts%22%3A1661248573513%2C%22d%22%3A%22deca.art%22%2C%22h%22%3A%22%2Fdecagon%2Fupgrade%22%7D; _hp2_id.3997967461=%7B%22userId%22%3A%22228206889423142%22%2C%22pageviewId%22%3A%227984211927353383%22%2C%22sessionId%22%3A%221972887794065235%22%2C%22identity%22%3Anull%2C%22trackerVersion%22%3A%224.0%22%7D; __Secure-next-auth.session-token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..SMzJu8eJbCGCy9Uy.z2XlDYf1l0aIlayENge_QqeV1Iwt0ur3KC5vU0Y7jtfp6NFFc5SyaVi6dC2oQQNhgHP_9Tbfyb8xVoEThDX68tx2G1kkLYkTWgRJ9Whve2ozJ72p1lsBpjhq0NWBxdsAuHgFrIV03jy3F0qYGzqeKIxFrpDdA3pbC0BEz0YS53o.Xptb4J57p_4VSj8R3_JiJg'
-    },
-  ]
-
   const getGalleries = (usernameOrAddress, cookie) => {
     const res = axios({
       method: 'get',
@@ -203,27 +133,27 @@ const genRanHex = size => [...Array(size)].map(() => Math.floor(Math.random() * 
         const galleries = info[0].result.data.json
         const deviceId = genRanHex(32)
         for (let i = 0; i < galleries.length; i++) {
-          for (let j = 0; j < types.length; j++) {
+          setTimeout(() => {
             if (i < 31) {
               await view(cookie, galleries[i].id, deviceId)
             }
-            const resStatus = await addEmoji(cookie, types[j], galleries[i].id, deviceId).catch(e => console.log('error-------',e))
+            const resStatus = await addEmoji(cookie, type, galleries[i].id, deviceId).catch(e => console.log('error-------',e))
             if (resStatus && resStatus.data && resStatus.data.json.message === 'Ok') {
-              console.log(`🚀 ~ file: index.js ~ line 86 ~ main ~ 第${c + 1}个用户点击第${u + 1}个用户的第${i + 1}个作品，点赞方式${types[j]}点赞完成`)
+              console.log(`🚀 ~ file: index.js ~ line 86 ~ main ~ 第${c + 1}个用户点击第${u + 1}个用户的第${i + 1}个作品，点赞方式${type}点赞完成`)
             }
-          }
+          }, 3000 * i)
         }
       }
     }
   }
 
   if (isMainThread) { // 主线程
-    const threadCount = cookies.length // 每个点赞用户一个线程
+    const threadCount = decaList.length // 每个点赞用户一个线程
     const threads = new Set()
     console.log(`-----------Running with ${threadCount} threads---------`)
   
     for (let i = 0; i < threadCount; i++) {
-      threads.add(new Worker(__filename, { workerData: { cookie: cookies[i].cookie, usernameOrAddress: cookies[i].usernameOrAddress, index: i }}))
+      threads.add(new Worker(__filename, { workerData: { cookie: decaList[i].cookie, usernameOrAddress: decaList[i].usernameOrAddress, index: i }}))
     }
   
     for (let worker of threads) {
