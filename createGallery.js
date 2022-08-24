@@ -3,7 +3,7 @@ const decaList = require('./user')
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads')
 
 
-const galleryCount = 10;
+const galleryCount = 32;
 
 ;(async () => {
   const getNfts = (cookie) => {

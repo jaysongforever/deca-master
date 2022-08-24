@@ -2,6 +2,11 @@ const axios = require('axios')
 const decaList = require('./user')
 
 const usernameOrAddress = JSON.parse(JSON.stringify(decaList))
+// const usernameOrAddress = [
+//   {
+//     usernameOrAddress: 'wowowoooo'
+//   }
+// ]
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads')
 // const HttpsProxyAgent = require("https-proxy-agent")
 
@@ -16,7 +21,7 @@ const genRanHex = size => [...Array(size)].map(() => Math.floor(Math.random() * 
 const type = 'FIRE' // 'FIRE', 'LAUGH', 'MINDBLOWN', 'LIKE'
 
 ;(async () => {
-  const getGalleries = (usernameOrAddress, cookie) => {
+  const getGalleries = (usernameOrAddress) => {
     const res = axios({
       method: 'get',
       url: `https://api.deca.art/trpc/gallery.previews?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22usernameOrAddress%22%3A%22${usernameOrAddress}%22%7D%7D%7D`,
@@ -26,7 +31,6 @@ const type = 'FIRE' // 'FIRE', 'LAUGH', 'MINDBLOWN', 'LIKE'
         'accept-language': 'zh-CN,zh;q=0.9,en;q=0.8',
         'cache-control': 'no-cache',
         'content-type': 'application/json',
-        cookie: cookie,
         origin: 'https://deca.art',
         'sec-ch-ua':
           '".Not/A)Brand";v="99", "Google Chrome";v="103", "Chromium";v="103"',
@@ -127,13 +131,13 @@ const type = 'FIRE' // 'FIRE', 'LAUGH', 'MINDBLOWN', 'LIKE'
       if (username === usernameOrAddress[u].usernameOrAddress) {
         continue
       }
-      const galleryInfo = await getGalleries(usernameOrAddress[u].usernameOrAddress, cookie)
+      const galleryInfo = await getGalleries(usernameOrAddress[u].usernameOrAddress)
       if (galleryInfo && galleryInfo.data) {
         const info = galleryInfo.data
         const galleries = info[0].result.data.json
         const deviceId = genRanHex(32)
         for (let i = 0; i < galleries.length; i++) {
-          setTimeout(() => {
+          setTimeout(async() => {
             if (i < 31) {
               await view(cookie, galleries[i].id, deviceId)
             }
