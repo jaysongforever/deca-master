@@ -1,4 +1,4 @@
-const axios = require('axios')
+const _axios = require('axios')
 const decaList = require('./user')
 
 const usernameOrAddress = JSON.parse(JSON.stringify(decaList))
@@ -8,10 +8,10 @@ const usernameOrAddress = JSON.parse(JSON.stringify(decaList))
 //   }
 // ]
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads')
-// const HttpsProxyAgent = require("https-proxy-agent")
+const HttpsProxyAgent = require("https-proxy-agent")
 
-// const httpsAgent = new HttpsProxyAgent(`http://127.0.0.1:10809`)
-// const axios = _axios.create({proxy: false, httpsAgent})
+const httpsAgent = new HttpsProxyAgent(`http://127.0.0.1:10802`)
+const axios = _axios.create({proxy: false, httpsAgent})
 
 // 随机生成固定长度的16进制字符串
 const genRanHex = size => [...Array(size)].map(() => Math.floor(Math.random() * 16).toString(16)).join('');

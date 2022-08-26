@@ -1,9 +1,12 @@
-const axios = require('axios')
+const _axios = require('axios')
 const decaList = require('./user')
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads')
+const HttpsProxyAgent = require("https-proxy-agent")
 
+const httpsAgent = new HttpsProxyAgent(`http://127.0.0.1:10802`)
+const axios = _axios.create({proxy: false, httpsAgent})
 
-const galleryCount = 10;
+const galleryCount = 32;
 
 ;(async () => {
   const getNfts = (cookie) => {
