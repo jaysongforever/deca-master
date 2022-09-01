@@ -1,12 +1,12 @@
-const _axios = require('axios')
+const axios = require('axios')
 const decaList = require('./user')
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads')
-const HttpsProxyAgent = require("https-proxy-agent")
+// const HttpsProxyAgent = require("https-proxy-agent")
 
-const httpsAgent = new HttpsProxyAgent(`http://127.0.0.1:10802`)
-const axios = _axios.create({proxy: false, httpsAgent})
+// const httpsAgent = new HttpsProxyAgent(`http://127.0.0.1:10802`)
+// const axios = _axios.create({proxy: false, httpsAgent})
 
-const galleryCount = 32;
+const galleryCount = 10;
 
 ;(async () => {
   const getNfts = (cookie) => {
@@ -135,15 +135,14 @@ const galleryCount = 32;
     })
     return res
   }
-  const generateGallery = (cookie, name) => {
+  const generateGallery = (cookie) => {
     const res = axios({
       method: 'post',
       url: `https://deca.art/api/graphql`,
       data: {
-        query: '\n    mutation CreateGallery($name: String!, $showcase: Boolean!, $layoutType: LayoutType!) {\n  createGallery(name: $name, showcase: $showcase, layoutType: $layoutType)\n}\n    ',
+        query: '\n    mutation CreateGallery($showcase: Boolean!, $layoutType: LayoutType!) {\n  createGallery(showcase: $showcase, layoutType: $layoutType) {\n    name\n  }\n}\n    ',
         variables: {
           layoutType: "FREESTYLE",
-          name: name,
           showcase: true
         },
       },
@@ -171,9 +170,9 @@ const galleryCount = 32;
 
   const create = async(cookie, usernameOrAddress, index) => {
     for(let i = 0; i < galleryCount; i++) {
-      const galleryName = `Gallery${i === 0 ? '' : i + 1}`
-      const res = await generateGallery(cookie, galleryName)
+      const res = await generateGallery(cookie)
       if (res && res.data && res.data.data.createGallery) {
+        const galleryName = res.data.data.createGallery.name
         const resIdInfo = await getGalleryId(cookie, galleryName, usernameOrAddress)
         if (resIdInfo && resIdInfo.data && resIdInfo.data.data.gallery) {
           const galleryId = resIdInfo.data.data.gallery.id

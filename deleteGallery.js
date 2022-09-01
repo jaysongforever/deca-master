@@ -64,7 +64,7 @@ const { Worker, isMainThread, parentPort, workerData } = require('worker_threads
   const deleteFunc = async(cookie, usernameOrAddress, index) => {
     const galleryInfo = await getGalleries(usernameOrAddress, cookie).catch(err => {})
     if (galleryInfo && galleryInfo.data) {
-      const galleries = galleryInfo.data[0].result.data.json
+      const galleries = galleryInfo.data[0].result.data.json.previews
       for (let i = 0; i < galleries.length; i++) {
         const res = await deleteGallery(galleries[i].id, cookie)
         if (res.data && res.data.data.deleteGallery) {

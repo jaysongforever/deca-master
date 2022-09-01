@@ -134,7 +134,7 @@ const type = 'FIRE' // 'FIRE', 'LAUGH', 'MINDBLOWN', 'LIKE'
       const galleryInfo = await getGalleries(usernameOrAddress[u].usernameOrAddress)
       if (galleryInfo && galleryInfo.data) {
         const info = galleryInfo.data
-        const galleries = info[0].result.data.json
+        const galleries = info[0].result.data.json.previews
         const deviceId = genRanHex(32)
         for (let i = 0; i < galleries.length; i++) {
           setTimeout(async() => {
