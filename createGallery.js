@@ -1,6 +1,7 @@
 const axios = require('axios')
 const decaList = require('./user')
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads')
+const genRanHex = (size, hex) => [...Array(size)].map(() => Math.floor(Math.random() * hex).toString(hex)).join('');
 // const HttpsProxyAgent = require("https-proxy-agent")
 
 // const httpsAgent = new HttpsProxyAgent(`http://127.0.0.1:10802`)
@@ -103,15 +104,16 @@ const galleryCount = 10;
   }
 
 
-  const getGalleryId = (cookie, name, usernameOrAddress) => {
+  const getGalleryId = (cookie, name, usernameOrAddress, requestId) => {
     const res = axios({
       method: 'post',
       url: `https://deca.art/api/graphql`,
       data: {
-        query: '\n    query Gallery($usernameOrAddress: String!, $name: String!) {\n  gallery(usernameOrAddress: $usernameOrAddress, name: $name) {\n    ...FullGallery\n    views\n  }\n}\n    \n    fragment FullGallery on Gallery {\n  id\n  name\n  renderMode\n  showListings\n  showcase\n  coverNft {\n    ...FullBareAsset\n  }\n  sections {\n    ...FullSection\n  }\n}\n    \n\n    fragment FullBareAsset on BareAsset {\n  id\n  provider\n  contract\n  tokenId\n  mediaUrl\n  previewStorageKey\n  previewMimeType\n  previewAspectRatio\n  storageKey\n  mimeType\n  tokenUrl\n  name\n  multimediaUrl\n  aspectRatio\n  metadata\n}\n    \n\n    fragment FullSection on GallerySection {\n  id\n  position\n  simpleItems {\n    id\n    sectionId\n    asset {\n      ...FullBareAsset\n    }\n    position\n  }\n  simpleTitle\n  freestyleItems {\n    ...FullFreestyleLayoutItem\n  }\n  freestyleRows\n  freestyleColumns\n}\n    \n\n    fragment FullFreestyleLayoutItem on FreestyleLayoutItem {\n  id\n  sectionId\n  startRow\n  endRow\n  startColumn\n  endColumn\n  properties {\n    ...FullFreestyleProperties\n  }\n  asset {\n    ...FullBareAsset\n  }\n  text\n}\n    \n\n    fragment FullFreestyleProperties on FreestyleProperties {\n  objectFit\n  backgroundColor\n  zIndex\n  textColor\n  fontSize\n  relativeFontSize\n  fontName\n}\n    ',
+        query: '\n    query Gallery($usernameOrAddress: String!, $name: String!, $requestId: String!) {\n  gallery(\n    usernameOrAddress: $usernameOrAddress\n    name: $name\n    requestId: $requestId\n  ) {\n    ...FullGallery\n    views\n  }\n}\n    \n    fragment FullGallery on Gallery {\n  id\n  name\n  renderMode\n  showListings\n  showcase\n  coverNft {\n    ...FullBareAsset\n  }\n  sections {\n    ...FullSection\n  }\n}\n    \n\n    fragment FullBareAsset on BareAsset {\n  id\n  provider\n  contract\n  tokenId\n  mediaUrl\n  previewStorageKey\n  previewMimeType\n  previewAspectRatio\n  storageKey\n  mimeType\n  tokenUrl\n  name\n  multimediaUrl\n  aspectRatio\n  metadata\n}\n    \n\n    fragment FullSection on GallerySection {\n  id\n  position\n  simpleItems {\n    id\n    sectionId\n    asset {\n      ...FullBareAsset\n    }\n    position\n  }\n  simpleTitle\n  freestyleItems {\n    ...FullFreestyleLayoutItem\n  }\n  freestyleRows\n  freestyleColumns\n}\n    \n\n    fragment FullFreestyleLayoutItem on FreestyleLayoutItem {\n  id\n  sectionId\n  startRow\n  endRow\n  startColumn\n  endColumn\n  properties {\n    ...FullFreestyleProperties\n  }\n  asset {\n    ...FullBareAsset\n  }\n  text\n}\n    \n\n    fragment FullFreestyleProperties on FreestyleProperties {\n  objectFit\n  backgroundColor\n  zIndex\n  textColor\n  fontSize\n  relativeFontSize\n  fontName\n}\n    ',
         variables: {
           name: name,
-          usernameOrAddress: usernameOrAddress
+          usernameOrAddress: usernameOrAddress,
+          requestId : requestId
         },
       },
       headers: {
@@ -173,7 +175,8 @@ const galleryCount = 10;
       const res = await generateGallery(cookie)
       if (res && res.data && res.data.data.createGallery) {
         const galleryName = res.data.data.createGallery.name
-        const resIdInfo = await getGalleryId(cookie, galleryName, usernameOrAddress)
+        const requestId = genRanHex(13, 10) + '.' + genRanHex(6, 32)
+        const resIdInfo = await getGalleryId(cookie, galleryName, usernameOrAddress, requestId).catch(e => console.log(e))
         if (resIdInfo && resIdInfo.data && resIdInfo.data.data.gallery) {
           const galleryId = resIdInfo.data.data.gallery.id
           const sectionsId = resIdInfo.data.data.gallery.sections[0].id
